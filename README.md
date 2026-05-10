@@ -1,5 +1,7 @@
 # Gutenberg AI Editorial Workbench
 
+<img width="2554" height="1302" alt="Screenshot 2026-05-08 084743" src="https://github.com/user-attachments/assets/83565b30-5fab-40c5-b5b5-0709ea393465" />
+
 **Version:** 2.2  
 **Architecture:** Python / FastAPI (Backend) + Vanilla HTML5/JS (Frontend)
 

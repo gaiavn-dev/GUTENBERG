@@ -2,6 +2,13 @@
 
 All notable changes to the Gutenberg AI Editorial Workbench project will be documented in this file.
 
+## [v2.3] - 2026-05-11
+
+### Changed
+- Expanded translation language support in the frontend dropdown to include Chinese (Simplified), Chinese (Traditional), Japanese, Korean, Portuguese (Brazil), Portuguese (Portugal), and Spanish.
+- Reorganized the target language selection list alphabetically for improved user navigation.
+
+
 ## [v2.2] - 2026-05-09
 
 ### Added

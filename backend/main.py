@@ -33,23 +33,25 @@ app.add_middleware(
 )
 
 jobs = {}
-JOBS_DIR = "d:/OCR/jobs"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+JOBS_DIR = os.path.join(BASE_DIR, "jobs")
 os.makedirs(JOBS_DIR, exist_ok=True)
 app.mount("/jobs", StaticFiles(directory=JOBS_DIR), name="jobs")
 
 def load_jobs():
     global jobs
     try:
-        with open("d:/OCR/jobs/jobs_db.json", "r", encoding="utf-8") as f:
+        db_path = os.path.join(JOBS_DIR, "jobs_db.json")
+        with open(db_path, "r", encoding="utf-8") as f:
             jobs = json.load(f)
     except FileNotFoundError:
         jobs = {}
 
 def persist_jobs():
     try:
-        with jobs_lock:
-            with open("d:/OCR/jobs/jobs_db.json", "w", encoding="utf-8") as f:
-                json.dump(jobs, f, indent=2)
+        db_path = os.path.join(JOBS_DIR, "jobs_db.json")
+        with open(db_path, "w", encoding="utf-8") as f:
+            json.dump(jobs, f, indent=2)
     except Exception as e:
         log_event(f"Failed to persist jobs: {str(e)}", "ERROR")
 
@@ -284,7 +286,7 @@ async def create_batch_job(
     files: list[UploadFile] = File(...)
 ):
     job_id = f"job_{int(time.time())}"
-    job_dir = f"d:/OCR/jobs/{job_id}"
+    job_dir = os.path.join(JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
     
     saved_files = []
@@ -526,8 +528,8 @@ async def retry_region(job_id: str, file_index: int, region_index: int):
     
     file_info = job["results"][file_index]
     filename = file_info["filename"]
-    job_dir = f"d:/OCR/jobs/{job_id}"
-    crop_path = f"{job_dir}/{filename}_crop_{region_index}.png"
+    job_dir = os.path.join(JOBS_DIR, job_id)
+    crop_path = os.path.join(job_dir, f"{filename}_crop_{region_index}.png")
     
     def _run_retry():
         return run_ollama_inference(crop_path, model_version, settings.get("prompt", ""), extra)
@@ -605,7 +607,8 @@ async def import_job_zip(file: UploadFile = File(...)):
 
 
 
-app.mount("/", StaticFiles(directory="d:/OCR/frontend", html=True), name="frontend")
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

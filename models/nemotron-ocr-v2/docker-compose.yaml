@@ -1,0 +1,22 @@
+services:
+  nemotron-ocr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    working_dir: /workspace
+    volumes:
+      - .:/workspace:rw
+      - d:/OCR/jobs:/jobs:rw
+      - ${XDG_CACHE_HOME:-~/cache}:/root/.cache:rw
+    command: bash -lc "python example.py ocr-example-input-1.png --merge-level paragraph"
+    ipc: host
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 6710886

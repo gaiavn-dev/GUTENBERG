@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GUTENBERG | AI Workbench v2.1</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+
+      <!-- ── HEADER ── -->
+      <header class="app-header">
+        <h1 class="brand">GUTENBERG <span>// AI EDITORIAL WORKBENCH</span></h1>
+        <div class="header-meta">
+          <button id="power-btn" class="tool-btn sm" style="background: #00ff00; color: #000; border-color: #00ff00; font-weight: bold; margin-right: 15px;">BACKEND: ON</button>
+          <button id="theme-toggle" class="tool-btn sm">🌓 THEME</button>
+          <span class="meta-item">MODE // MULTI-REGION EXTRACTION</span>
+          <span id="status-badge" class="meta-item status-ready" style="cursor:pointer" title="Click to restart Ollama">OLLAMA: READY</span>
+        </div>
+      </header>
+
+      <!-- ── BODY ── -->
+      <div class="app-body">
+
+        <!-- LEFT COLUMN: Batch & Region Explorer -->
+        <div class="left-col explorer-panel">
+          <!-- STAGING: File Input Panel (top of explorer) -->
+          <div class="staging-header-panel">
+            <div class="staging-drop-row">
+              <input type="file" id="file-input" multiple style="display:none;">
+              <input type="file" id="folder-input" webkitdirectory directory style="display:none;">
+              <label for="file-input" class="btn-solid sm btn-files">+ FILES</label>
+              <label for="folder-input" class="btn-solid sm btn-folder">+ FOLDERS</label>
+              <div id="drop-zone" class="inline-drop-zone">or DROP HERE</div>
+            </div>
+            <div id="staged-list" class="staged-list-inline"></div>
+          </div>
+
+          <!-- TWO-COLUMN BATCH BROWSER -->
+          <div class="explorer-grid">
+            <div class="explorer-col">
+              <div class="sub-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>BATCHES</span>
+                <button class="btn-solid sm" id="import-batch-btn" style="padding:2px 6px; font-size:10px; background:#00ff00; color:#000; border:none;" onclick="document.getElementById('import-batch-input').click()">+ IMPORT</button>
+                <input type="file" id="import-batch-input" accept=".zip" style="display:none;" onchange="importBatch(event)">
+              </div>
+              <div id="jobs-list" class="jobs-list"></div>
+            </div>
+            <div class="explorer-col">
+              <div class="sub-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>FILES & REGIONS</span>
+                <div style="display:flex; gap:5px;">
+                  <button class="btn-solid sm" id="add-to-batch-btn" style="padding:2px 6px; font-size:10px; background:#00ff00; color:#000; border:none; display:none;" onclick="document.getElementById('add-to-batch-input').click()">+ ADD</button>
+                  <button class="btn-solid sm" id="sync-btn" style="padding:2px 6px; font-size:10px; background:#00ff00; color:#000; border:none; display:none;" onclick="selectJob(currentJobId, true)">↻ SYNC</button>
+                </div>
+                <input type="file" id="add-to-batch-input" multiple style="display:none;" onchange="addFilesToCurrentBatch(event)">
+              </div>
+              <div id="files-list" class="files-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER COLUMN: Main Workbench -->
+        <div class="center-col main-workbench">
+          
+          <div class="workbench-toolbar" style="display:flex; align-items:center; gap: 15px; padding: 8px 12px; background: var(--panel-header); border-bottom: 1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap: 8px; flex: 1;">
+              <span style="font-size: 10px; color: var(--dim); white-space: nowrap;">EXPORT FILENAME:</span>
+              <input type="text" id="export-filename" placeholder="batch_export" 
+                     style="background: var(--input-bg); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; font-size: 11px; flex: 1; max-width: 300px; font-family: inherit;">
+            </div>
+            
+            <div style="display:flex; align-items:center; gap: 8px;">
+              <button class="btn-solid sm" id="save-btn" style="background:#00ff00; color:#000; border:none; padding:4px 10px;">SAVE →</button>
+              <button class="btn-solid sm" id="rerun-batch-btn" style="display:none; background:#ff9900; color:#000; border:none; padding:4px 10px;">RE-RUN ⟲</button>
+              <div style="width: 1px; height: 16px; background: var(--border); margin: 0 4px;"></div>
+              
+              <button class="btn-outline sm" onclick="exportBatchZip()" style="border-color: #00ff00; color: #00ff00;">EXPORT ↓</button>
+              <div style="width: 1px; height: 16px; background: var(--border); margin: 0 4px;"></div>
+              <span style="font-size: 10px; color: var(--dim);">FINAL:</span>
+              <button id="final-export-pdf" title="Export PDF" class="btn-outline sm" style="padding: 2px 6px;">[PDF]</button>
+              <button id="final-export-doc" title="Export DOCX" class="btn-outline sm" style="padding: 2px 6px;">[DOC]</button>
+              <button id="final-export-txt" title="Export TXT" class="btn-outline sm" style="padding: 2px 6px;">[TXT]</button>
+            </div>
+          </div>
+
+          <div class="workbench-top-row">
+            <!-- Pro Image Preview with Polygon Tool -->
+            <div class="panel panel-preview">
+            <div class="panel-header preview-header">
+              <div class="tool-group" style="align-items:center; gap: 4px;">
+                <button id="tool-poly" class="tool-btn active" title="Polygon Tool">⬠ POLYGON</button>
+                <button id="clear-poly" class="tool-btn danger" title="Clear">CLEAR</button>
+                
+                <span style="color:var(--success); font-size:10px; margin-left:8px;">DPI:</span>
+                <select id="preprocess-dpi" class="tool-select" style="background:var(--input-bg); color:var(--success); border:1px solid var(--success); font-family:'IBM Plex Mono', monospace; padding: 2px 4px; font-size:10px;">
+                  <option value="150">150</option>
+                  <option value="300" selected>300</option>
+                  <option value="600">600</option>
+                </select>
+
+                <span style="color:var(--success); font-size:10px; margin-left:8px;">STR: <span id="preprocess-strength-val">15</span></span>
+                <input type="range" id="preprocess-strength" min="1" max="40" value="15" style="width: 60px;">
+
+                <button id="preprocess-btn" class="tool-btn" style="border-color:var(--success); color:#000; background:var(--success);" title="Apply Adaptive Gaussian Thresholding">PRE-PROCESS</button>
+                <button id="restore-btn" class="tool-btn danger" style="display:none;" title="Restore Original Image">RESTORE</button>
+              </div>
+              <div id="preview-filename" class="preview-filename">NO FILE SELECTED</div>
+              <div class="zoom-controls">
+                <button id="zoom-out">−</button>
+                <button id="zoom-reset">1:1</button>
+                <button id="zoom-in">+</button>
+              </div>
+            </div>
+            <div id="image-viewport" class="image-viewport">
+              <div id="image-wrapper" class="image-wrapper">
+                <img id="preview-img" src="" alt="">
+                <canvas id="poly-canvas"></canvas>
+              </div>
+            </div>
+            <div class="poly-list-panel">
+              <div id="active-polygons" class="poly-tags">
+                <!-- Polygons listed here -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- FINAL EDIT BLOCK (Top Right) -->
+          <div class="panel panel-final-edit">
+            <div class="editor-header" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>FINAL_EDIT.MD</div>
+              <div class="page-navigator" style="display:flex; gap:0.5rem; align-items:center; font-size:0.8rem;">
+                <button id="final-prev-btn" title="Previous Page" class="btn-outline sm">[&lt;]</button>
+                <input type="number" id="final-page-input" value="1" min="1" style="width:3rem; background:transparent; border:1px solid #00ff00; color:#00ff00; text-align:center; padding:2px; font-family:inherit;" />
+                <span id="final-page-total" style="color:#00ff00;">/ 1</span>
+                <button id="final-next-btn" title="Next Page" class="btn-outline sm">[&gt;]</button>
+                <div class="nav-divider" style="color:#00ff00; opacity:0.5;">|</div>
+                <button id="final-add-btn" title="Add Page" class="btn-outline sm">[+]</button>
+                <button id="final-remove-btn" title="Remove Page" class="btn-outline sm">[-]</button>
+              </div>
+            </div>
+            <textarea id="final-editor" class="text-editor" spellcheck="false" placeholder="Final compilation..."></textarea>
+          </div>
+        </div>
+
+        <!-- Editors Section (Bottom Row) -->
+        <div class="dual-editor-grid">
+          <div class="editor-block">
+            <div class="editor-header">EXTRACTED.MD</div>
+            <textarea id="extracted-text-editor" class="text-editor" spellcheck="false" placeholder="OCR output..."></textarea>
+          </div>
+      
+          <div class="editor-block">
+            <div class="editor-header">TRANSLATION.MD</div>
+            <textarea id="translation-editor" class="text-editor" spellcheck="false" placeholder="Translation..."></textarea>
+          </div>
+        </div>
+
+          <div class="review-footer" style="gap: 12px; justify-content: flex-end; padding: 4px 12px; border-top: 1px solid var(--border);">
+            <button class="btn-outline sm" id="retry-region-btn" style="display:none; color: #00ff00; border-color: #00ff00;">RETRY REGION ⟲</button>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Controls -->
+        <aside class="right-col config-panel">
+
+          <div class="panel-header"><h2>Controls</h2></div>
+          <div class="config-scroll">
+            
+            <div class="action-grid">
+              <button id="commit-batch-btn" class="btn-solid primary-action" disabled>TRANSCRIBE</button>
+              <button id="translate-btn" class="btn-solid primary-action">TRANSLATE</button>
+            </div>
+
+            <form id="settings-form" class="config-form">
+              <div class="form-group">
+                <div class="group-label">OCR ENGINE</div>
+                <div class="form-row">
+                  <label>MODEL</label>
+                  <select id="model" class="minimal-input">
+                    <option value="Keyvan/german-ocr-3.1:latest">German-OCR-3.1</option>
+                    <option value="gemma4:31b">Gemma 4 (VISION)</option>
+                    <option value="qwen2.5:32b">Qwen 2.5 32B</option>
+                  </select>
+                </div>
+                <div class="form-row" style="margin-top: 4px; gap: 4px;">
+                  <input type="text" id="new-model-input" class="minimal-input" placeholder="ollama tag (e.g. llama3)" style="flex:1;">
+                  <button id="pull-model-btn" class="btn-outline sm" style="border-color:#00ff00; color:#00ff00; padding: 2px 8px;" title="Pull model from Ollama">PULL</button>
+                </div>
+                <div class="form-row">
+                  <label>PROMPT</label>
+                  <textarea id="prompt" class="minimal-input prompt-area">Transcribe exactly.</textarea>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="group-label">TRANSLATION</div>
+                <div class="form-row">
+                  <label>MODEL</label>
+                  <select id="trans-model" class="minimal-input"></select>
+                </div>
+                <div class="form-row">
+                  <label>TARGET</label>
+                  <select id="target-lang" class="minimal-input">
+                    <option value="English">English</option>
+                    <option value="French">French</option>
+                    <option value="German">German</option>
+                    <option value="Vietnamese">Vietnamese</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label>TONE</label>
+                  <select id="trans-tone" class="minimal-input">
+                    <option value="Professional">Professional</option>
+                    <option value="Casual">Casual</option>
+                    <option value="Academic">Academic</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="group-label">INTEGRITY</div>
+                <div id="model-status-list" class="model-status-list">
+                  <div class="status-placeholder">Checking...</div>
+                </div>
+              </div>
+            </form>
+
+            <div class="form-group" style="margin-top: 10px;">
+              <div class="group-label">SYSTEM</div>
+            </div>
+          </div>
+
+          <!-- Console Window -->
+          <div class="panel-console" id="console-panel">
+            <div class="console-header">
+              <span>SYSTEM CONSOLE</span>
+              <button class="tool-btn sm" onclick="clearConsole()">CLEAR</button>
+            </div>
+            <div id="console-output" class="console-output"></div>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+    <script src="./main.js"></script>
+  </body>
+</html>

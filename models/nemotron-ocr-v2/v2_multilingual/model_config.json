@@ -1,0 +1,18 @@
+{
+  "num_tokens": 14247,
+  "max_width": 128,
+  "sequence_length": 128,
+  "scope": 2048,
+  "coordinate_mode": "RBOX",
+  "backbone": "regnet_x_8gf",
+  "charset_size": 14244,
+  "recognizer_variant": "prenorm",
+  "has_pre_norm": false,
+  "has_tx_norm": true,
+  "norm_first": true,
+  "depth": 256,
+  "num_layers": 6,
+  "nhead": 8,
+  "dim_feedforward": 2048,
+  "feature_depth": 512
+}

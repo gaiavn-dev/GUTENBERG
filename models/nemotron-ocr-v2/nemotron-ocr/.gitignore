@@ -1,0 +1,9 @@
+# Built C++/CUDA extension (produced by: pip install -v .)
+src/nemotron_ocr_cpp/*.so
+src/nemotron_ocr_cpp/*.pyd
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+build/
+*.egg-info/
